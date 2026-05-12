@@ -170,6 +170,7 @@ class MatrixGame:
             return False, 0.0
 
         prev_rank = self.compute_rank()
+        prev_was_healthy = (prev_rank == self.size)
 
         self.matrix[row, col] = value
         self.move_count += 1
@@ -179,10 +180,12 @@ class MatrixGame:
         
         new_rank = self.compute_rank()
         
-        if (self.is_singular() or self.is_condition_singular()) and self.move_count > 4:
+        if (self.is_singular() or self.is_condition_singular()) and self.move_count > 4 and prev_was_healthy:
+            self.scores[self.current_player] += 50.0
             reward = 50.0
             self.game_over = True
         elif new_rank < prev_rank:
+            self.scores[self.current_player] += -10.0
             reward = -10.0
             rank_penalty = True
         
@@ -191,6 +194,7 @@ class MatrixGame:
         self.last_rank_penalty = rank_penalty
         
         if self.is_full():
+            self.scores[self.current_player] += 100.0
             reward += 100.0
             self.game_over = True
         
@@ -202,7 +206,7 @@ class MatrixGame:
         
         self.current_player = 1 - self.current_player
         
-        return True, reward
+        return True, reward, rank_penalty
 
     def _determine_winner_by_scores(self):
         if self.scores[0] > self.scores[1]:

@@ -16,10 +16,10 @@ class GameRunner:
         self.game = MatrixGame()
         self.rl_agent = QLearningAgent(
             alpha=0.1,
-            gamma=0.9,
+            gamma=0.95,
             epsilon=1.0,
             epsilon_min=0.01,
-            epsilon_decay=0.995,
+            epsilon_decay=0.9995,
             q_table_file="q_table.pkl" if args.save_qtable else None
         )
         self.heuristic_agent = HeuristicAgent(strategy="adaptive")
