@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RL Matrix Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>RL Matrix Game</h1>
+        <p class="subtitle">Q-Learning Agent vs Heuristic</p>
+        
+        <!-- Player Info -->
+        <div class="game-info">
+            <div class="player-info">
+                <span class="badge" id="current-player">RL Agent</span>
+                <span class="score">RL: <span id="score-rl">0</span></span>
+                <span class="score">H: <span id="score-h">0</span></span>
+            </div>
+            <div class="turn">Move: <span id="move-count">0</span></div>
+        </div>
+        
+        <!-- Dashboard -->
+        <div class="dashboard">
+            <div class="metric">
+                <div class="label">Determinant</div>
+                <div class="value" id="determinant">0</div>
+            </div>
+            <div class="metric">
+                <div class="label">Condition</div>
+                <div class="value" id="condition">0</div>
+            </div>
+            <div class="metric">
+                <div class="label">Rank</div>
+                <div class="value" id="rank">0</div>
+            </div>
+            <div class="metric">
+                <div class="label">Singularity</div>
+                <div class="value" id="singularity">0</div>
+            </div>
+        </div>
+        
+        <!-- Matrix Grid -->
+        <div class="matrix-container">
+            <div class="matrix" id="matrix-grid"></div>
+        </div>
+        
+        <!-- Controls -->
+        <div class="controls">
+            <button onclick="resetGame()" class="btn btn-reset">Reset</button>
+            <button onclick="makeMove()" class="btn btn-move">Next Move</button>
+            <button onclick="autoPlay()" class="btn btn-auto">Auto-Play</button>
+        </div>
+        
+        <!-- Status -->
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        async function updateUI() {
+            const res = await fetch('/api/state');
+            const s = await res.json();
+            
+            document.getElementById('determinant').textContent = s.determinant;
+            document.getElementById('condition').textContent = s.condition;
+            document.getElementById('rank').textContent = s.rank;
+            document.getElementById('singularity').textContent = s.singularity_score;
+            document.getElementById('score-rl').textContent = s.scores[0].toFixed(1);
+            document.getElementById('score-h').textContent = s.scores[1].toFixed(1);
+            document.getElementById('move-count').textContent = s.move_count;
+            
+            const badge = document.getElementById('current-player');
+            badge.textContent = s.current_player === 0 ? 'RL Agent' : 'Heuristic';
+            badge.style.background = s.current_player === 0 ? '#2E86AB' : '#E94F37';
+            
+            // Render matrix
+            const grid = document.getElementById('matrix-grid');
+            grid.innerHTML = '';
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    const v = s.matrix[i][j];
+                    cell.textContent = v || '';
+                    cell.style.background = v ? '#2E86AB' : 'rgba(255,255,255,0.1)';
+                    grid.appendChild(cell);
+                }
+            }
+            
+            if (s.game_over) {
+                const status = document.getElementById('status');
+                let winnerText = '';
+                if (s.winner === 0) {
+                    winnerText = `RL Wins! (score: ${s.scores[0].toFixed(1)})`;
+                } else if (s.winner === 1) {
+                    winnerText = `Heuristic Wins! (score: ${s.scores[1].toFixed(1)})`;
+                } else {
+                    winnerText = `Tie! (RL: ${s.scores[0].toFixed(1)}, H: ${s.scores[1].toFixed(1)})`;
+                }
+                status.textContent = winnerText;
+                status.style.background = 'rgba(68,175,105,0.3)';
+            }
+        }
+        
+        async function resetGame() {
+            await fetch('/api/reset', {method: 'POST'});
+            document.getElementById('status').textContent = '';
+            document.getElementById('status').style.background = 'transparent';
+            updateUI();
+        }
+        
+        async function makeMove() {
+            const res = await fetch('/api/move', {method: 'POST'});
+            const data = await res.json();
+            if (data.error) alert(data.error);
+            updateUI();
+        }
+        
+        async function autoPlay() {
+            await fetch('/api/auto', {method: 'POST'});
+            updateUI();
+        }
+        
+        window.onload = updateUI;
+    </script>
+</body>
+</html>
